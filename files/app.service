@@ -1,0 +1,14 @@
+[Unit]
+Description={{app_name}} daemon
+After=network-online.target
+
+[Service]
+Type=simple
+User={{app_name}}
+ExecStart=/usr/bin/java -jar /opt/{{app_name}}/{{app_name}}.jar --server.port=8080
+WorkDirectory=/opt/{{app_name}}
+EnvironmentFile=/etc/{{app_name}}/envs
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

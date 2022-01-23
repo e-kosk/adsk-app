@@ -1,0 +1,74 @@
+---
+- hosts: app
+  become: yes
+  vars: 
+    app_url: https://github.com/jkanclerz/pp5-z/releases/download/v1.1/uek-ecommerce.jar
+    app_name: uek-ecommerce
+    app_envs:
+      - key: PAYU_API_KEY
+        value: topSecretApiKey
+      - key: PAYU_API_SECRET
+        value: topSecretApiSecret
+  tasks:
+    - name: "Install Java Runtime env"
+      yum:
+        name: java-11-amazon-corretto
+        state: present
+    - name: "Create app user"
+      user:
+        name: "{{app_name}}"
+    - name: "Create app directory"
+      file:
+        path: "/opt/{{app_name}}"
+        state: directory
+        owner: "{{app_name}}"
+        group: "{{app_name}}"
+    - name: "Download app jar"
+      get_url:
+        url: "{{app_url}}"
+        dest: "/opt/{{app_name}}/{{app_name}}.jar"
+        owner: "{{app_name}}"
+        group: "{{app_name}}"
+    - name: "Create config directory"
+      file:
+        path: "/etc/{{app_name}}"
+        state: directory
+    - name: "Put env variables"
+      template:
+        src: files/envs
+        dest: "/etc/{{app_name}}/envs"
+    - name: "Put systemd configuration for unit"
+      template:
+        src: files/app.service
+        dest: "/etc/systemd/system/{{app_name}}.service"
+    - name: "Start service"
+      systemd:
+        name: "{{app_name}}"
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
+
+- hosts: lb
+  become: yes
+  vars:
+    - EPEL_REPO: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    - app_nodes: 
+        - 172.31.16.35:8080
+        - 172.31.20.195:8080
+  tasks: 
+    - name: "Install EPEL"
+      yum:
+        name: "{{EPEL_REPO}}"
+        state: present
+    - name: "Install nginx"
+      yum:
+        name: nginx
+        state: present
+    - name: "Put nginx config"
+      template:
+        src: files/lb.conf
+        dest: /etc/nginx/conf.d/uek-ecommerce.conf
+    - name: "Restart nginx"
+      service:
+        name: nginx
+        state: restarted

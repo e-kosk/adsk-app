@@ -1,0 +1,3 @@
+{% for env in app_envs %}
+{{env.key}}='{{env.value}}'
+{% endfor %}
